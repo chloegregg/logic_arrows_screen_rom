@@ -57,10 +57,8 @@ def dithered_to_rom(dithered: list[list[bool]], size: tuple[int, int], version: 
     map.version = version
 
     for x in range(size[0]):
-        map.get(x*3, -1).type = arrows.ArrowType.Arrow
+        map.get(x*3, -1).type = arrows.ArrowType.BlueArrow
         map.get(x*3, -1).direction = arrows.Direction.East
-        map.get(x*3 + 1, -1).type = arrows.ArrowType.Arrow
-        map.get(x*3 + 1, -1).direction = arrows.Direction.East
         map.get(x*3 + 2, -1).type = arrows.ArrowType.BlueArrow
         map.get(x*3 + 2, -1).direction = arrows.Direction.North
     for y in range(0, size[1], 2):
