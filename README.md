@@ -1,6 +1,6 @@
 Basic command line tool for creating Logic Arrows Screen ROMs.
 
-Help Text:
+```
     usage: lasr.py [-h] [-c] [-p PADDING] [-g GAMMA] [-v VERSION] width height file
 
     positional arguments:
@@ -17,6 +17,7 @@ Help Text:
                             gamma correction factor
     -v VERSION, --version VERSION
                             logic arrows map version
+```
 
 Includes and uses a copy of https://github.com/kala-telo/arrows.py.
 
