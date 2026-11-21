@@ -6,6 +6,7 @@ Basic command line tool for creating Logic Arrows Screen ROMs.
     positional arguments:
     width                 screen width in pixels
     height                screen height in pixels
+    layout                layout image path
     file                  source image path
 
     options:
