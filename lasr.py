@@ -3,6 +3,18 @@ from PIL import Image
 
 # don't read this it's garbage
 
+WALL_PALETTE = Image.new("P", (1, 1))
+WALL_PALETTE.putpalette([
+    190, 190, 190,
+    190, 0, 0,
+    95, 133, 190,
+    190, 190, 0,
+    0, 171, 0,
+    190, 133, 19,
+    152, 114, 171,
+    0, 0, 0
+])
+
 def get_image_data(img: Image.Image, size: tuple[int, int], layout_brightness: float, gamma: float = 1.5, padding: int = 8) -> list[tuple[float, ...]]:
     img = img.convert("RGB").resize(size)
     res = Image.new("RGB", (size[0] + padding + 1, size[1] + padding + 1))
@@ -46,28 +58,27 @@ def encode_image(img: Image.Image, size: tuple[int, int], layout: Image.Image, g
         for y in range(size[1])
     ]
 
-def draw_dithered(dithered: list[list[bool]]) -> Image.Image:
+def draw_dithered(dithered: list[list[bool]], layout: Image.Image) -> Image.Image:
+    layout_data: list[tuple[int, ...]] = layout.convert("RGB").getdata() # type: ignore
     img = Image.new("RGB", (len(dithered[0]), len(dithered)), (0, 0, 0))
     for y in range(len(dithered)):
-        dithered.append([])
         for x in range(len(dithered[0])):
-            channel = (x + y) % 3
             if dithered[y][x]:
-                img.putpixel((x, y), (int(channel == 0) * 255, int(channel == 1) * 255, int(channel == 2) * 255))
+                img.putpixel((x, y), layout_data[x % layout.width + y % layout.height * layout.width])
     return img
 
-def dithered_to_rom(dithered: list[list[bool]], size: tuple[int, int], version: int = 5) -> arrows.Map:
+def dithered_to_rom(dithered: list[list[bool]], version: int = 5) -> arrows.Map:
     map = arrows.Map()
     map.version = version
 
-    for x in range(size[0]):
+    for x in range(len(dithered[0])):
         map.get(x*3, -1).type = arrows.ArrowType.BlueArrow
         map.get(x*3, -1).direction = arrows.Direction.East
         map.get(x*3 + 2, -1).type = arrows.ArrowType.BlueArrow
         map.get(x*3 + 2, -1).direction = arrows.Direction.North
-    for y in range(0, size[1], 2):
+    for y in range(0, len(dithered), 2):
         offset = 0 if y % 4 == 0 else 1
-        for x in range(size[0]):
+        for x in range(len(dithered[0])):
             map.get(x*3 + offset, y).direction = arrows.Direction.East
             if dithered[y][x] and dithered[y + 1][x]:
                 map.get(x*3 + offset, y).type = arrows.ArrowType.SplitterUpRightLeft
@@ -110,25 +121,51 @@ def dithered_to_rom(dithered: list[list[bool]], size: tuple[int, int], version: 
         map.get(-2, y+2).direction = arrows.Direction.East
     return map
 
+def image_to_walls(img: Image.Image, version: int = 5) -> arrows.Map:
+    colours = list(img.getdata()) # type: ignore
+
+    map = arrows.Map()
+    map.version = version
+
+    for y in range(img.height):
+        for x in range(img.width):
+            map.get(x, y).type = arrows.ArrowType.Wall
+            map.get(x, y).color = colours[x + y * img.width]
+    return map
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("width", type=int, help="screen width in pixels")
     parser.add_argument("height", type=int, help="screen height in pixels")
-    parser.add_argument("layout", type=str, help="layout image path")
     parser.add_argument("file", type=str, help="source image path")
     parser.add_argument("-c", "--copy", action="store_true", help="copy code to clipboard")
     parser.add_argument("-p", "--padding", type=int, default=8, help="add padding around the edge of the image for better dithering")
     parser.add_argument("-g", "--gamma", type=float, default=1.5, help="gamma correction factor")
     parser.add_argument("-v", "--version", type=int, default=5, help="logic arrows map version")
+    parser.add_argument("-w", "--walls", action="store_true", help="generate walls instead of rom")
+    parser.add_argument("-l", "--layout", type=str, help="layout image path")
+    parser.add_argument("-o", "--output", type=str, help="store a preview of the rom as an image at this path")
     args = parser.parse_args()
     
     img = Image.open(args.file)
-    layout = Image.open(args.layout)
     size = (args.width, args.height)
-    dithered = encode_image(img, size, layout, padding=args.padding, gamma=args.gamma)
-    code = dithered_to_rom(dithered, size, version=args.version).export()
+    if args.walls:
+        quant = img.resize(size).quantize(palette=WALL_PALETTE)
+        code = image_to_walls(quant, version=args.version).export()
+        if args.output is not None:
+            quant.save(args.output)
+    else:
+        if args.layout:
+            layout = Image.open(args.layout)
+        else:
+            layout = Image.new("RGB", (3, 3))
+            layout.putdata([255, 255 << 8, 255 << 16,  255 << 8, 255 << 16, 255,  255 << 16, 255, 255 << 8])
+        dithered = encode_image(img, size, layout, padding=args.padding, gamma=args.gamma)
+        code = dithered_to_rom(dithered, version=args.version).export()
+        if args.output is not None:
+            draw_dithered(dithered, layout).save(args.output)
     if args.copy:
         import pyperclip
         pyperclip.copy(code)
