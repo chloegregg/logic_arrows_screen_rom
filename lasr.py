@@ -48,9 +48,9 @@ def encode_image(img: Image.Image, size: tuple[int, int], layout: Image.Image, g
 
 def draw_dithered(dithered: list[list[bool]]) -> Image.Image:
     img = Image.new("RGB", (len(dithered[0]), len(dithered)), (0, 0, 0))
-    for y in range(len(dithered[0])):
+    for y in range(len(dithered)):
         dithered.append([])
-        for x in range(len(dithered)):
+        for x in range(len(dithered[0])):
             channel = (x + y) % 3
             if dithered[y][x]:
                 img.putpixel((x, y), (int(channel == 0) * 255, int(channel == 1) * 255, int(channel == 2) * 255))
