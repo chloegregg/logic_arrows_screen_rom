@@ -317,7 +317,7 @@ class Map:
                         dnf >>= 1
                     elif self.version == 5:
                         has_data = dnf & 0b1000
-                        dnf &= 0b0111
+                        dnf &= ~0b1000
                     if has_data:
                         val = pop16()
                         if dnf & 0x10 != 0:
